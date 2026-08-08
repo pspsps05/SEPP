@@ -1,14 +1,16 @@
 package com.example.demo.service;
 
-import java.time.LocalDate;
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-
+import com.example.demo.event.CourseDroppedEvent;
+import com.example.demo.event.CourseEnrolledEvent;
 import com.example.demo.model.Enrollment;
+import com.example.demo.producer.EnrollmentEventProducer;
 import com.example.demo.repository.CourseRepository;
 import com.example.demo.repository.EnrollmentRepository;
 import com.example.demo.repository.StudentRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class EnrollmentService {
@@ -16,18 +18,21 @@ public class EnrollmentService {
     private final EnrollmentRepository enrollmentRepository;
     private final StudentRepository studentRepository;
     private final CourseRepository courseRepository;
+    private final EnrollmentEventProducer eventProducer; 
 
+    // Constructor Injection 
     public EnrollmentService(EnrollmentRepository enrollmentRepository, 
                              StudentRepository studentRepository, 
-                             CourseRepository courseRepository) {
+                             CourseRepository courseRepository,
+                             EnrollmentEventProducer eventProducer) {
         this.enrollmentRepository = enrollmentRepository;
         this.studentRepository = studentRepository;
         this.courseRepository = courseRepository;
+        this.eventProducer = eventProducer;
     }
 
     // 1. Enrol student
     public Enrollment enrolStudent(Long studentId, Long courseId) {
-
         if (!studentRepository.existsById(studentId)) {
             throw new RuntimeException("Error: Student with ID " + studentId + " does not exist.");
         }
@@ -46,7 +51,22 @@ public class EnrollmentService {
         enrollment.setStatus("ACTIVE");
         enrollment.setEnrolledDate(LocalDate.now());
 
-        return enrollmentRepository.save(enrollment);
+ 
+        Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+
+     
+        CourseEnrolledEvent event = new CourseEnrolledEvent(
+                studentId, 
+                courseId, 
+                "COURSE_ENROLLED", 
+                LocalDate.now()
+        );
+        
+  
+        eventProducer.publishCourseEnrolled(event);
+
+  
+        return savedEnrollment;
     }
 
     // 2. View student's enrolments
@@ -61,8 +81,21 @@ public class EnrollmentService {
 
         enrollment.setStatus("DROPPED");
 
-        // save
-        return enrollmentRepository.save(enrollment);
-        
+
+        Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+
+
+        CourseDroppedEvent event = new CourseDroppedEvent(
+                studentId, 
+                courseId, 
+                "COURSE_DROPPED", 
+                LocalDate.now()
+        );
+
+   
+        eventProducer.publishCourseDropped(event);
+
+   
+        return savedEnrollment;
     }
 }
