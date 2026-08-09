@@ -1,8 +1,9 @@
 package com.example.demo.kafka; 
-import com.example.demo.event.CourseDroppedEvent;
-import com.example.demo.event.CourseEnrolledEvent;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.event.CourseDroppedEvent;
+import com.example.demo.event.CourseEnrolledEvent;
 
 @Service
 public class EnrollmentEventProducer {

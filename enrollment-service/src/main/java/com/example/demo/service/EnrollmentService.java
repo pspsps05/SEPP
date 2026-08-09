@@ -1,16 +1,17 @@
 package com.example.demo.service;
 
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.example.demo.event.CourseDroppedEvent;
 import com.example.demo.event.CourseEnrolledEvent;
+import com.example.demo.kafka.EnrollmentEventProducer;
 import com.example.demo.model.Enrollment;
-import com.example.demo.producer.EnrollmentEventProducer;
 import com.example.demo.repository.CourseRepository;
 import com.example.demo.repository.EnrollmentRepository;
 import com.example.demo.repository.StudentRepository;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
-import java.util.List;
 
 @Service
 public class EnrollmentService {
