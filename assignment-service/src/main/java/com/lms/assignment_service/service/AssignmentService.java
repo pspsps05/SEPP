@@ -1,23 +1,31 @@
 package com.lms.assignment_service.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.lms.assignment_service.dto.AssignmentRequest;
 import com.lms.assignment_service.dto.HandinRequest;
 import com.lms.assignment_service.model.Assignment;
 import com.lms.assignment_service.repository.AssignmentRepository;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.util.List;
+import com.lms.assignment_service.repository.EnrollmentAccessRepository;
 
 @Service
 public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
     private final AssignmentEventPublisher eventPublisher;
+    private final EnrollmentAccessRepository enrollmentAccessRepository;
 
-    public AssignmentService(AssignmentRepository assignmentRepository, AssignmentEventPublisher eventPublisher) {
+   public AssignmentService(
+        AssignmentRepository assignmentRepository,
+        AssignmentEventPublisher eventPublisher,
+        EnrollmentAccessRepository enrollmentAccessRepository) {
+
         this.assignmentRepository = assignmentRepository;
         this.eventPublisher = eventPublisher;
+        this.enrollmentAccessRepository = enrollmentAccessRepository;
     }
 
     // --- Instructor Functions ---
@@ -63,21 +71,43 @@ public class AssignmentService {
     // --- Student Functions ---
 
     public Assignment handinAssignment(HandinRequest request) {
+
         Assignment assignment = assignmentRepository.findById(request.getAssignmentId())
                 .orElseThrow(() -> new RuntimeException("Assignment not found"));
 
+        // Check whether the student is actively enrolled in the course
+        boolean hasAccess =
+                enrollmentAccessRepository
+                        .existsByStudentIdAndCourseIdAndStatus(
+                                request.getStudentId(),
+                                assignment.getCourseId(),
+                                "ACTIVE"
+                        );
+
+        if (!hasAccess) {
+            throw new RuntimeException(
+                    "Student is not actively enrolled in this course"
+            );
+        }
+
         // Check if already submitted
         if (assignment.getSubmittedByStudentId() != null) {
-            throw new RuntimeException("Assignment already submitted by a student");
+            throw new RuntimeException(
+                    "Assignment already submitted by a student"
+            );
         }
 
         assignment.setSubmittedByStudentId(request.getStudentId());
         assignment.setSubmissionText(request.getSubmissionText());
         assignment.setSubmittedAt(LocalDateTime.now());
-        // Marks not awarded yet (null)
 
         Assignment saved = assignmentRepository.save(assignment);
-        eventPublisher.publishAssignmentSubmitted(saved.getId(), saved.getSubmittedByStudentId());
+
+        eventPublisher.publishAssignmentSubmitted(
+                saved.getId(),
+                saved.getSubmittedByStudentId()
+        );
+
         return saved;
     }
 
