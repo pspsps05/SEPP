@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.lms.assignment_service.dto.AssignmentRequest;
 import com.lms.assignment_service.dto.HandinRequest;
+import com.lms.assignment_service.exception.NotEnrolledException;
 import com.lms.assignment_service.model.Assignment;
 import com.lms.assignment_service.repository.AssignmentRepository;
 import com.lms.assignment_service.repository.EnrollmentAccessRepository;
@@ -85,7 +86,7 @@ public class AssignmentService {
                         );
 
         if (!hasAccess) {
-            throw new RuntimeException(
+            throw new NotEnrolledException(
                     "Student is not actively enrolled in this course"
             );
         }
