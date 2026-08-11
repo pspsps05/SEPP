@@ -12,6 +12,8 @@ import com.example.demo.model.Enrollment;
 import com.example.demo.repository.CourseRepository;
 import com.example.demo.repository.EnrollmentRepository;
 import com.example.demo.repository.StudentRepository;
+import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.exception.DuplicateEnrollmentException;
 
 @Service
 public class EnrollmentService {
@@ -35,15 +37,15 @@ public class EnrollmentService {
     // 1. Enrol student
     public Enrollment enrolStudent(Long studentId, Long courseId) {
         if (!studentRepository.existsById(studentId)) {
-            throw new RuntimeException("Error: Student with ID " + studentId + " does not exist.");
+            throw new ResourceNotFoundException("Error: Student with ID " + studentId + " does not exist.");
         }
 
         if (!courseRepository.existsById(courseId)) {
-            throw new RuntimeException("Error: Course with ID " + courseId + " does not exist.");
+            throw new ResourceNotFoundException("Error: Course with ID " + courseId + " does not exist.");
         }
 
         if (enrollmentRepository.existsByStudentIdAndCourseIdAndStatus(studentId, courseId, "ACTIVE")) {
-            throw new RuntimeException("Error: Student is already actively enrolled in this course.");
+            throw new DuplicateEnrollmentException("Error: Student is already actively enrolled in this course.");
         }
 
         Enrollment enrollment = new Enrollment();
@@ -78,13 +80,11 @@ public class EnrollmentService {
     // 3. Withdraw
     public Enrollment withdrawStudent(Long studentId, Long courseId) {
         Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseIdAndStatus(studentId, courseId, "ACTIVE")
-                .orElseThrow(() -> new RuntimeException("Error: Student is not actively enrolled in this course."));
+                .orElseThrow(() -> new ResourceNotFoundException("Error: Student is not actively enrolled in this course."));
 
         enrollment.setStatus("DROPPED");
 
-
         Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
-
 
         CourseDroppedEvent event = new CourseDroppedEvent(
                 studentId, 
